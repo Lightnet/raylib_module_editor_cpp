@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.15)
 # project(raylib_module_c LANGUAGES C CXX)
 project(raylib_module_cpp)
 
+set(CMAKE_CXX_STANDARD 17) 
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS  OFF)
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -130,7 +134,7 @@ FetchContent_MakeAvailable(raygui)
 FetchContent_Declare(
     flecs
     GIT_REPOSITORY https://github.com/SanderMertens/flecs.git
-    GIT_TAG v4.1.1
+    GIT_TAG v4.1.2
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(flecs)
@@ -212,21 +216,16 @@ if(${EXAMPLE_APP})
     message(STATUS "EXPORT APP")
     set(APP_NAME ril)
     set(SRC_FILES
-        # src/module_cimgui.c                             # cimgui
-        # src/module_lua.c                                # lua
-        # src/module_enet.c                               # enet
-        # src/module_raylib.c                             # raylib
-        # src/drawcube.c                                    # raylib
+        ${rlimgui_SOURCE_DIR}/rlImGui.cpp
     )
     add_executable(${APP_NAME}
         # icon.rc
-        # ${SRC_FILES}
-        # src/main.c
+        ${SRC_FILES}
         # src/main.cpp
-        ${rlimgui_SOURCE_DIR}/rlImGui.cpp
         # src/main_imgui.cpp
         # src/main_imgui_flecs.cpp
-        src/main_flecs01.cpp
+        # src/main_flecs03.cpp
+        src/main_flecs04.cpp
     )
 
     # Link application with custom_cimgui
