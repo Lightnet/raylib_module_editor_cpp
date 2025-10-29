@@ -9,6 +9,11 @@
 #include "rlImGui.h"	        // include the API header
 #include "bake_config.h"
 #include <iostream>
+#include <rlgl.h>
+
+
+const float MOUSE_YAW_SENSITIVITY   = 0.003f;   // radians per pixel
+const float MOUSE_PITCH_SENSITIVITY = 0.003f;
 
 // phases
 flecs::entity RLUpdate;
@@ -28,9 +33,9 @@ struct cube_t {
     Vector3 size;
     Color color;
 };
-struct velocity_t {
-    Vector3 value{0,0,0};
-};
+// struct velocity_t {
+//     Vector3 value{0,0,0};
+// };
 struct main_context_t {
     Camera3D camera;
 };
@@ -43,6 +48,115 @@ struct imgui_test_t {
     float f;
     ImVec4 clear_color;
 };
+
+// ---------------------------------------------------------------
+//  Transform3D – hierarchical 3-D transform (position/rot/scale)
+// ---------------------------------------------------------------
+struct Transform3D {
+    Vector3    position{0,0,0};   // local translation
+    Quaternion rotation{0,0,0,1}; // local rotation (identity)
+    Vector3    scale{1,1,1};      // local scale
+    Matrix     localMatrix{};     // cached local matrix
+    Matrix     worldMatrix{};     // cached world matrix
+    bool       isDirty{true};     // true → needs recalculation
+};
+
+// ------------------------------------------------------------
+//  Helpers – world is now const&
+// ------------------------------------------------------------
+static void mark_hierarchy_dirty(flecs::entity e)
+{
+    if (!e.has<Transform3D>()) return;
+
+    Transform3D& t = e.get_mut<Transform3D>();
+    t.isDirty = true;
+    e.modified<Transform3D>();
+
+    e.children([&](flecs::entity child){
+        mark_hierarchy_dirty(child);
+    });
+}
+
+static void update_transform(const flecs::world& world, flecs::entity e, Transform3D& t)
+{
+    // ---- early-out ------------------------------------------------
+    flecs::entity parent = e.parent();
+    bool parentDirty = false;
+    if (parent && parent.has<Transform3D>()) {
+        const Transform3D& pt = parent.get<Transform3D>();
+        parentDirty = pt.isDirty;
+    }
+    if (!t.isDirty && !parentDirty) return;
+
+    // ---- local matrix --------------------------------------------
+    Matrix translation = MatrixTranslate(t.position.x, t.position.y, t.position.z);
+    Matrix rotation    = QuaternionToMatrix(t.rotation);
+    Matrix scaling     = MatrixScale(t.scale.x, t.scale.y, t.scale.z);
+    t.localMatrix = MatrixMultiply(scaling, MatrixMultiply(rotation, translation));
+
+    // ---- world matrix --------------------------------------------
+    if (!parent) {
+        t.worldMatrix = t.localMatrix;
+    } else {
+        const Transform3D& pt = parent.get<Transform3D>();
+        t.worldMatrix = MatrixMultiply(t.localMatrix, pt.worldMatrix);
+    }
+
+    // ---- mark children dirty --------------------------------------
+    e.children([&](flecs::entity child){
+        if (child.has<Transform3D>()) {
+            Transform3D& ct = child.get_mut<Transform3D>();
+            ct.isDirty = true;
+            child.modified<Transform3D>();
+        }
+    });
+
+    t.isDirty = false;
+}
+
+static void update_hierarchy(const flecs::world& world, flecs::entity e)
+{
+    if (!e.has<Transform3D>()) return;
+
+    Transform3D& t = e.get_mut<Transform3D>();
+    update_transform(world, e, t);
+
+    e.children([&](flecs::entity child){
+        update_hierarchy(world, child);
+    });
+}
+
+// ------------------------------------------------------------
+//  System – capture the world correctly
+// ------------------------------------------------------------
+static void Transform3DSystem(flecs::iter& it)
+{
+    // it.world() is an rvalue → store it in a variable first
+    const flecs::world& w = it.world();
+
+    auto q = w.query<Transform3D>();
+    q.each([&w](flecs::entity e, Transform3D&) {
+        update_hierarchy(w, e);
+    });
+}
+
+void setup_transform3d(flecs::world& ecs)
+{
+    // Component
+    ecs.component<Transform3D>();
+
+    // System – give it a nice name and put it in a phase you prefer.
+    // Here we put it in the same RLUpdate phase you already use for
+    // player logic, but you can create a dedicated phase if you want.
+    ecs.system("Transform3DSystem")
+       .kind(RLUpdate)                 // <-- change to your own phase if desired
+       .run(Transform3DSystem);
+}
+
+
+// ---------------------------------------------------------------
+// 
+// ---------------------------------------------------------------
 
 // Dummy system
 void Sys(flecs::iter& it) {
@@ -120,70 +234,77 @@ void render_3d_cube_system(flecs::iter& it) {
     Vector3 cubePosition = { 0.0f, 0.0f, 0.0f };
     DrawCubeWires(cubePosition, 2.0f, 2.0f, 2.0f, MAROON);
 }
+
+
+// ------------------------------------------------------------
+//  Player input – use get_mut + modified
+// ------------------------------------------------------------
 void player_input_system(flecs::iter& it)
 {
-    flecs::world world = it.world();
-
-    // Guard – player singleton must exist
+    const flecs::world& world = it.world();
     if (!world.has<player_controller_t>()) return;
 
-    // Get camera (read-only)
-    const main_context_t& ctx = world.get<main_context_t>();
+    const auto& pc = world.get<player_controller_t>();
+    flecs::entity player = pc.id;
+    if (!player.has<Transform3D>() || !world.has<main_context_t>()) return;
+
+    const auto& ctx = world.get<main_context_t>();
     const Camera3D& cam = ctx.camera;
 
-    // Get the player entity
-    const player_controller_t& pc = world.get<player_controller_t>();
-    flecs::entity player = pc.id;
+    // === 1. Build camera-relative forward/right (XZ plane) ===
+    Vector3 camForward = Vector3Subtract(cam.target, cam.position);
+    camForward.y = 0;
+    camForward = Vector3Normalize(camForward);
+    Vector3 camRight = Vector3CrossProduct(camForward, cam.up);
+    camRight = Vector3Normalize(camRight);
 
-    // -----------------------------------------------------------------
-    // 1. Build a forward/right vector that lies on the XZ plane
-    // -----------------------------------------------------------------
-    Vector3 forward = Vector3Subtract(cam.target, cam.position);
-    forward.y = 0;                     // keep only XZ
-    forward = Vector3Normalize(forward);
+    // === 2. Accumulate movement input ===
+    Vector3 move_dir{0,0,0};
+    const float speed = 5.0f;
+    if (IsKeyDown(KEY_W)) move_dir = Vector3Add(move_dir, camForward);
+    if (IsKeyDown(KEY_S)) move_dir = Vector3Subtract(move_dir, camForward);
+    if (IsKeyDown(KEY_A)) move_dir = Vector3Subtract(move_dir, camRight);
+    if (IsKeyDown(KEY_D)) move_dir = Vector3Add(move_dir, camRight);
+    if (Vector3LengthSqr(move_dir) > 0.0f) move_dir = Vector3Normalize(move_dir);
 
-    Vector3 right = Vector3CrossProduct(forward, cam.up);
-    right = Vector3Normalize(right);
-
-    // -----------------------------------------------------------------
-    // 2. Accumulate desired direction
-    // -----------------------------------------------------------------
-    Vector3 dir{0,0,0};
-    const float speed = 5.0f;          // units per second
-
-    if (IsKeyDown(KEY_W)) dir = Vector3Add(dir, forward);
-    if (IsKeyDown(KEY_S)) dir = Vector3Subtract(dir, forward);
-    if (IsKeyDown(KEY_A)) dir = Vector3Subtract(dir, right);
-    if (IsKeyDown(KEY_D)) dir = Vector3Add(dir, right);
-
-    if (Vector3LengthSqr(dir) > 0) {
-        dir = Vector3Scale(Vector3Normalize(dir), speed);
-    }
-
-    // -----------------------------------------------------------------
-    // 3. Write velocity (create component if missing)
-    // -----------------------------------------------------------------
-    if (!player.has<velocity_t>()) {
-        player.add<velocity_t>();
-    }
-    player.set<velocity_t>({ .value = dir });
-}
-void player_move_system(flecs::iter& it)
-{
     float dt = it.delta_time();
+    Vector3 worldDelta = Vector3Scale(move_dir, speed * dt);
 
-    // Query entities that have both a cube (position) and velocity
-    it.world().query<cube_t, velocity_t>()
-        .each([dt](cube_t& cube, velocity_t& vel)
-    {
-        // Simple Euler integration
-        cube.position = Vector3Add(cube.position,
-                      Vector3Scale(vel.value, dt));
+    // === 3. Mouse rotation ===
+    Vector2 mouseDelta = GetMouseDelta();
+    bool doYaw   = IsMouseButtonDown(MOUSE_LEFT_BUTTON);
+    bool doPitch = IsMouseButtonDown(MOUSE_RIGHT_BUTTON);
 
-        // Optional: damp velocity if you want “inertia”
-        // vel.value = Vector3Scale(vel.value, 0.9f);
-    });
+    Transform3D& t = player.get_mut<Transform3D>();
+
+    if (doYaw || doPitch) {
+        Quaternion yawQuat   = QuaternionIdentity();
+        Quaternion pitchQuat = QuaternionIdentity();
+
+        if (doYaw) {
+            float yaw = -mouseDelta.x * MOUSE_YAW_SENSITIVITY;
+            yawQuat = QuaternionFromAxisAngle({0,1,0}, yaw);
+        }
+        if (doPitch) {
+            float pitch = -mouseDelta.y * MOUSE_PITCH_SENSITIVITY;
+            pitchQuat = QuaternionFromAxisAngle({1,0,0}, pitch);
+        }
+
+        t.rotation = QuaternionMultiply(t.rotation, QuaternionMultiply(pitchQuat, yawQuat));
+        t.isDirty = true;
+    }
+
+    // === 4. Apply movement in local space ===
+    if (Vector3LengthSqr(worldDelta) > 0.0f) {
+        Matrix rotMat = QuaternionToMatrix(t.rotation);
+        Vector3 localDelta = Vector3Transform(worldDelta, rotMat);
+        t.position = Vector3Add(t.position, localDelta);
+        t.isDirty = true;
+    }
+
+    player.modified<Transform3D>();
 }
+
 //-----------------------------------------------
 //
 //-----------------------------------------------
@@ -220,16 +341,16 @@ void init_systems(flecs::world& ecs) {
     ecs.system("player_input_system")
         .kind(RLUpdate)
         .run(player_input_system);
-    ecs.system("player_move_system")
-        .kind(RLUpdate)               // runs right after player_input_system
-        .run(player_move_system);
-    ecs.system<cube_t>("render_3d_cube_system")
-    .kind(RLRender3D)
-    .each([](cube_t& cube) {
-        // TraceLog(LOG_INFO, "render???");
-        // Each is invoked for each entity
-        DrawCubeWires(cube.position, cube.size.x, cube.size.y, cube.size.z, cube.color);
-    });
+
+    ecs.system<cube_t, const Transform3D>("render_3d_cube_system")
+        .kind(RLRender3D)
+        .each([](const cube_t& c, const Transform3D& tr) {
+            // push matrix, draw, pop
+            rlPushMatrix();
+            rlMultMatrixf(MatrixToFloat(tr.worldMatrix));
+            DrawCubeWires({0,0,0}, c.size.x, c.size.y, c.size.z, c.color);
+            rlPopMatrix();
+        });
     
 }
 // set up components
@@ -279,8 +400,8 @@ void setup_components(flecs::world& ecs) {
     ecs.component<main_context_t>().add(flecs::Singleton);
     ecs.component<player_controller_t>().add(flecs::Singleton);
     // Register component
+    ecs.component<Transform3D>();
     ecs.component<imgui_test_t>();
-    ecs.component<velocity_t>();
     ecs.component<cube_t>();
 }
 // ----------------------------------------------
@@ -315,6 +436,7 @@ int main()
     // set up
     setup_components(world);
     init_systems(world);
+    setup_transform3d(world);
 
     world.set<main_context_t>({
         .camera = camera
@@ -324,27 +446,35 @@ int main()
     //     .camera = camera
     // });
 
-    flecs::entity my_entity = world.entity();
-    my_entity.set(cube_t{
-        .position = {0.0f, 0.0f, 0.0f},
-        .size = {1.0f, 1.0f, 1.0f},
-        .color = RED
-    });
-    flecs::entity my_entity2 = world.entity();
-    my_entity2.set(cube_t{
-        .position = {3.0f, 0.0f, 0.0f},
-        .size = {1.0f, 1.0f, 1.0f},
-        .color = GREEN
-    });
+    // ---------------------------------------------------
+    // 1. Add the component to an entity
+    // ---------------------------------------------------
+    flecs::entity cube = world.entity()
+        .set<Transform3D>({
+            .position = {0, 0, 0},
+            .rotation = QuaternionFromAxisAngle({0,1,0}, 0), // identity
+            .scale    = {1,1,1}
+        })
+        .set<cube_t>({ .size = {1,1,1}, .color = RED });
+
+
+    // ---------------------------------------------------
+    // 2. Make a child
+    // ---------------------------------------------------
+    flecs::entity child = world.entity()
+        .child_of(cube)                     // hierarchy!
+        .set<Transform3D>({
+            .position = {2,0,0},
+            .scale    = {0.5f,0.5f,0.5f}
+        })
+        .set<cube_t>({ .size = {1,1,1}, .color = BLUE });;
+
+
     world.set(player_controller_t{
-        .id = my_entity
+        .id = cube
     });
-    world.set(imgui_test_t{
-        .is_demo = true,
-        .is_open = true,
-        .f = 0.0f,
-        .clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f)
-    });
+
+
     rlImGuiSetup(true); 	// sets up ImGui with ether a dark or light default theme
     // -------------------------------------------------------
     // 2. Main game loop
