@@ -4,18 +4,10 @@
 #define RAYLIB_IMPLEMENTATION   // <-- tells raylib to include its source once
 #include <raylib.h>             // <-- raylib header (C API, works fine in C++)
 #include "raymath.h"
-
 #include "imgui.h"
 #include "rlImGui.h"	        // include the API header
 #include "bake_config.h"
-
 #include <iostream>
-
-struct Position {
-    float x, y;
-};
-
-struct Walking { };
 
 bool open = true;
 bool test_open = true;
@@ -61,7 +53,6 @@ void imgui_end_system(flecs::iter& it) {
 void end_drawing_system(flecs::iter& it) {
     EndDrawing();
 }
-
 
 void init_systems(flecs::world& ecs) {
     TraceLog(LOG_INFO, "init_systems");

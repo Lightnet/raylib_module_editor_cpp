@@ -4,12 +4,11 @@
 #define RAYLIB_IMPLEMENTATION   // <-- tells raylib to include its source once
 #include <raylib.h>             // <-- raylib header (C API, works fine in C++)
 #include "raymath.h"
-
 #include "imgui.h"
 #include "rlImGui.h"	        // include the API header
 #include "bake_config.h"
-
 #include <iostream>
+
 // phases
 flecs::entity RLUpdate;
 flecs::entity RLBeginDrawing;
@@ -22,9 +21,6 @@ flecs::entity RLImguiRender;
 flecs::entity RLImguiEnd;
 flecs::entity RLRender2D;
 flecs::entity RLEndDrawing;
-
-// flecs::entity RLPlayer;
-// flecs::entity ;
 
 struct cube_t {
     Vector3 position;
@@ -44,10 +40,18 @@ struct player_controller_t {
     flecs::entity id;
 };
 
-bool open = true;
-bool test_open = true;
-float f = 0.0f;
-ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+struct imgui_test_t {
+    bool is_demo;
+    bool is_open;
+    float f;
+    ImVec4 clear_color;
+};
+
+
+// bool open = true;
+// bool test_open = true;
+// float f = 0.0f;
+// ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 // Dummy system
 void Sys(flecs::iter& it) {
@@ -73,18 +77,9 @@ void begin_camera_mode_3d_system(flecs::iter& it) {
     Camera3D& cam = const_cast<Camera3D&>(ctx.camera); // non-const ref
     BeginMode3D(cam);
 }
-// test
-void render_3d_system(flecs::iter& it) {
-    Vector3 cubePosition = { 0.0f, 0.0f, 0.0f };
-    DrawCubeWires(cubePosition, 2.0f, 2.0f, 2.0f, MAROON);
-}
 // end camera mode 3d
 void end_camera_mode_3d_system(flecs::iter& it) {
     // TraceLog(LOG_INFO,"End Camera 3D");
-    // flecs::world world = it.world();
-    // if (!world.has<main_context_t>()) {
-    //     return;
-    // }
     flecs::world world = it.world();
     if (!world.has<main_context_t>()) { //check for single access
         return; // Singleton destroyed, skip to prevent crashed.
@@ -97,15 +92,24 @@ void imgui_begin_system(flecs::iter& it) {
 }
 // imgui set up widgets
 void imgui_render_system(flecs::iter& it) {
-    if (ImGui::Begin("Test Window", &test_open))
+
+    flecs::world world = it.world();
+
+    if (!world.has<imgui_test_t>()) { //check for single access
+        return; // Singleton destroyed, skip to prevent crashed.
+    }
+    imgui_test_t& ctx = world.get_mut<imgui_test_t>();
+
+
+    if (ImGui::Begin("Test Window", &ctx.is_demo))
     {
         ImGui::TextUnformatted(ICON_FA_JEDI);
         ImGui::Text("Test Text.");               // Display some text (you can use a format strings too)
-        // ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-        // ImGui::ColorEdit3("clear color", &clear_color.x); // Edit 3 floats representing a color
-        // if (ImGui::Button("Button")){                            // Buttons return true when clicked (most widgets return true when edited/activated)
-        //     TraceLog(LOG_INFO, "Click...\n");
-        // }
+        ImGui::SliderFloat("float", &ctx.f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+        ImGui::ColorEdit3("clear color", &ctx.clear_color.x); // Edit 3 floats representing a color
+        if (ImGui::Button("Button")){                            // Buttons return true when clicked (most widgets return true when edited/activated)
+            TraceLog(LOG_INFO, "Click");
+        }
         // rlImGuiImage(&image);
     }
     ImGui::End();
@@ -119,7 +123,7 @@ void end_drawing_system(flecs::iter& it) {
     EndDrawing();
 }
 //-----------------------------------------------
-//
+// player
 //-----------------------------------------------
 void render_3d_cube_system(flecs::iter& it) {
     Vector3 cubePosition = { 0.0f, 0.0f, 0.0f };
@@ -225,7 +229,7 @@ void init_systems(flecs::world& ecs) {
     ecs.system("end_camera_mode_3d_system")
         .kind(RLEndMode3D)
         .run(end_camera_mode_3d_system);
-
+    // 
     ecs.system("player_input_system")
         .kind(RLUpdate)
         .run(player_input_system);
@@ -290,6 +294,7 @@ void setup_components(flecs::world& ecs) {
     ecs.component<main_context_t>().add(flecs::Singleton);
     ecs.component<player_controller_t>().add(flecs::Singleton);
     // Register component
+    ecs.component<imgui_test_t>();
     ecs.component<velocity_t>();
     ecs.component<cube_t>();
 }
@@ -320,20 +325,19 @@ int main()
     camera.fovy = 45.0f;                                // Camera field-of-view Y
     camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type
 
-    // Vector3 cubePosition = { 0.0f, 0.0f, 0.0f };
-
     // Create the world
     flecs::world world;
     // set up
     setup_components(world);
     init_systems(world);
 
-    // world.set<main_context_t>({
-    //     .camera = camera
-    // });
-    world.set(main_context_t{
+    world.set<main_context_t>({
         .camera = camera
     });
+
+    // world.set(main_context_t{
+    //     .camera = camera
+    // });
 
     flecs::entity my_entity = world.entity();
     my_entity.set(cube_t{
@@ -351,6 +355,14 @@ int main()
 
     world.set(player_controller_t{
         .id = my_entity
+    });
+
+
+    world.set(imgui_test_t{
+        .is_demo = true,
+        .is_open = true,
+        .f = 0.0f,
+        .clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f)
     });
 
 

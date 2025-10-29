@@ -4,17 +4,9 @@
 #define RAYLIB_IMPLEMENTATION   // <-- tells raylib to include its source once
 #include <raylib.h>             // <-- raylib header (C API, works fine in C++)
 #include "raymath.h"
-
 #include "imgui.h"
 #include "rlImGui.h"	        // include the API header
 #include "bake_config.h"
-
-
-struct Position {
-    float x, y;
-};
-
-struct Walking { };
 
 bool open = true;
 bool test_open = true;

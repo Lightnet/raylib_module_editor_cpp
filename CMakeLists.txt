@@ -225,7 +225,8 @@ if(${EXAMPLE_APP})
         # src/main_imgui.cpp
         # src/main_imgui_flecs.cpp
         # src/main_flecs03.cpp
-        src/main_flecs04.cpp
+        # src/main_flecs04.cpp
+        src/main_flecs.cpp
     )
 
     # Link application with custom_cimgui
