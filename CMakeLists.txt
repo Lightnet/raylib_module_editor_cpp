@@ -193,8 +193,6 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp)
 target_include_directories(imgui INTERFACE ${imgui_SOURCE_DIR})
 
-
-
 FetchContent_Declare(
     rlimgui
     GIT_REPOSITORY https://github.com/raylib-extras/rlImGui.git
@@ -204,7 +202,6 @@ FetchContent_Declare(
     USES_TERMINAL_DOWNLOAD TRUE
 )
 FetchContent_MakeAvailable(rlimgui)
-
 
 #================================================
 # Application
@@ -228,7 +225,8 @@ if(${EXAMPLE_APP})
         # src/main.cpp
         ${rlimgui_SOURCE_DIR}/rlImGui.cpp
         # src/main_imgui.cpp
-        src/main_imgui_flecs.cpp
+        # src/main_imgui_flecs.cpp
+        src/main_flecs01.cpp
     )
 
     # Link application with custom_cimgui
