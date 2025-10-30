@@ -47,6 +47,14 @@ struct imgui_test_t {
     ImVec4 clear_color;
 };
 
+// event
+struct click_t{};
+struct resize_t{
+    int width;
+    int height;
+};
+flecs::entity widget;
+
 // Dummy system
 void Sys(flecs::iter& it) {
     std::cout << "system " << it.system().name() << "\n";
@@ -103,6 +111,14 @@ void imgui_render_system(flecs::iter& it) {
         ImGui::ColorEdit3("clear color", &ctx.clear_color.x); // Edit 3 floats representing a color
         if (ImGui::Button("Button")){                            // Buttons return true when clicked (most widgets return true when edited/activated)
             TraceLog(LOG_INFO, "Click");
+            // Emit entity event
+            widget.emit<click_t>();
+        }
+
+        if (ImGui::Button("resize")){                            // Buttons return true when clicked (most widgets return true when edited/activated)
+            TraceLog(LOG_INFO, "resize");
+            // Emit entity event
+            widget.emit<resize_t>({100, 200});
         }
         // rlImGuiImage(&image);
     }
@@ -239,6 +255,19 @@ void init_systems(flecs::world& ecs) {
         // Each is invoked for each entity
         DrawCubeWires(cube.position, cube.size.x, cube.size.y, cube.size.z, cube.color);
     });
+
+    widget = ecs.entity("widget");
+
+    // Create an entity observer
+    widget.observe<click_t>([]() {
+        // ...
+        TraceLog(LOG_INFO,"event flecs click...");
+    });
+
+    widget.observe<resize_t>([](resize_t& r) {
+        TraceLog(LOG_INFO,"resize: %dx%d", r.width, r.height);
+        // ...
+    });
     
 }
 // set up components
@@ -291,6 +320,8 @@ void setup_components(flecs::world& ecs) {
     ecs.component<imgui_test_t>();
     ecs.component<velocity_t>();
     ecs.component<cube_t>();
+    ecs.component<click_t>();
+    ecs.component<resize_t>();
 }
 // --------------------------------------------------------
 // main

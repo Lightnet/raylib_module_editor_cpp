@@ -25,10 +25,6 @@
 
 JPH_SUPPRESS_WARNINGS
 
-// static JPH::TempAllocatorImpl sTempAllocator(10 * 1024 * 1024);
-// JPH::TempAllocatorImpl sallocator(10 * 1024 * 1024); // Uses system allocator
-// static JPH::JobSystemThreadPool sJobSystem(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers);
-
 // using namespace JPH;
 using namespace JPH::literals;
 using namespace std;
@@ -155,14 +151,12 @@ public:
     virtual void OnBodyDeactivated(const JPH::BodyID &, JPH::uint64) override { /*cout << "Deactivated" << endl;*/ }
 };
 
-
 // ---------------------------------------------------------------------
 // MAIN
 int main(int argc, char** argv)
 {
-    // JPH::TempAllocatorImpl sTempAllocator(10 * 1024 * 1024);
 
-    TraceLog(LOG_INFO,    "init");
+    TraceLog(LOG_INFO, "init");
     JPH::RegisterDefaultAllocator();
     JPH::Trace = TraceImpl;
     JPH_IF_ENABLE_ASSERTS(JPH::AssertFailed = AssertFailedImpl;)
@@ -268,7 +262,7 @@ int main(int argc, char** argv)
     // bool is_running = false;
     JPH::Vec3 gravity(0, -9.8f, 0);
 
-    TraceLog(LOG_INFO,    "init loop");
+    TraceLog(LOG_INFO, "init loop");
     while (!WindowShouldClose())
     {
         const float deltaTime = GetFrameTime();

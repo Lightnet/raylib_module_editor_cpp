@@ -267,7 +267,9 @@ if(${EXAMPLE_APP})
         # examples/raylib_jolt.cpp
         # examples/raylib_jolt.cpp
         # examples/raylib_jolt_camera.cpp
-        examples/raylib_jolt_character.cpp
+        # examples/raylib_jolt_character.cpp
+        # examples/main_flecs_event.cpp
+        examples/main_flecs_event_params.cpp
     )
 
     # Link application with custom_cimgui
