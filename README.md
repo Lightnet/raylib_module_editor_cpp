@@ -12,6 +12,15 @@
 # Information:
   Sample c++ for raylib with imgui and flecs. Note there will be c code as well for simple libraries. Flecs has c and c++.
 
+# Features:
+- [x] transform 3d hierarchy
+- [x] simple imgui
+- [ ] custom phase
+  - [x] render camera 3d
+  - [x] imgui
+  - [ ] render camera 2d 
+  - [ ] render 2d
+
 # Flecs:
   There was different ways to set up depend build config on the query components.
 
@@ -36,6 +45,10 @@ world.set(main_context_t{
 });
 ```
   Note this is sample and rework later. It to access singleton struct.
+
+
+
+
 
 # Credits:
 - flecs community on discord.

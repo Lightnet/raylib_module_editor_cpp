@@ -27,6 +27,10 @@ flecs::entity RLImguiRender;
 flecs::entity RLImguiEnd;
 flecs::entity RLRender2D;
 flecs::entity RLEndDrawing;
+
+flecs::entity parent_id;
+flecs::entity child_id;
+
 // components
 struct cube_t {
     Vector3 position;
@@ -244,7 +248,7 @@ void player_input_system(flecs::iter& it)
     const flecs::world& world = it.world();
     if (!world.has<player_controller_t>()) return;
 
-    const auto& pc = world.get<player_controller_t>();
+    auto& pc = world.get_mut<player_controller_t>();
     flecs::entity player = pc.id;
     if (!player.has<Transform3D>() || !world.has<main_context_t>()) return;
 
@@ -261,6 +265,18 @@ void player_input_system(flecs::iter& it)
     // === 2. Accumulate movement input ===
     Vector3 move_dir{0,0,0};
     const float speed = 5.0f;
+
+    if(IsKeyPressed(KEY_ONE)){
+        pc.id = parent_id;
+        return;
+    }
+
+    if(IsKeyPressed(KEY_TWO)){
+        pc.id = child_id;
+        return;
+    }
+
+
     if (IsKeyDown(KEY_W)) move_dir = Vector3Add(move_dir, camForward);
     if (IsKeyDown(KEY_S)) move_dir = Vector3Subtract(move_dir, camForward);
     if (IsKeyDown(KEY_A)) move_dir = Vector3Subtract(move_dir, camRight);
@@ -456,8 +472,7 @@ int main()
             .scale    = {1,1,1}
         })
         .set<cube_t>({ .size = {1,1,1}, .color = RED });
-
-
+    parent_id = cube;
     // ---------------------------------------------------
     // 2. Make a child
     // ---------------------------------------------------
@@ -468,10 +483,19 @@ int main()
             .scale    = {0.5f,0.5f,0.5f}
         })
         .set<cube_t>({ .size = {1,1,1}, .color = BLUE });;
+    child_id = child;
+    flecs::entity sub_cube = world.entity("ChildCube")
+    .child_of(child)
+    .set<Transform3D>({
+        .position = {2, 2, 0},
+        .scale    = {0.5f, 0.5f, 0.5f}
+    })
+    .set<cube_t>({ .size = {1,1,1}, .color = BLUE });
 
-
+    // test
     world.set(player_controller_t{
-        .id = cube
+        // .id = cube
+        .id = child
     });
 
 
