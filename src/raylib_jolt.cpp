@@ -25,12 +25,6 @@
 
 JPH_SUPPRESS_WARNINGS
 
-// #define MY_GREEN (Color){ 34, 139, 34, 255 }
-// #define MY_DARKGREEN (Color){ 0, 117, 44, 255 } 
-// #define MY_RED (Color){ 230, 41, 55, 255 }
-// #define MY_DARKGRAY (Color){ 80, 80, 80, 255 } 
-// #define MY_RAYWHITE (Color){ 245, 245, 245, 255 }
-
 // using namespace JPH;
 using namespace JPH::literals;
 using namespace std;
@@ -71,7 +65,6 @@ namespace BroadPhaseLayers
     static constexpr JPH::BroadPhaseLayer MOVING(1);
     static constexpr JPH::uint            NUM_LAYERS = 2;
 };
-
 
 class BPLayerInterfaceImpl final : public JPH::BroadPhaseLayerInterface
 {
@@ -137,9 +130,6 @@ public:
         }
     }
 };
-
-
-
 
 class MyContactListener : public JPH::ContactListener
 {
@@ -238,13 +228,15 @@ int main(int argc, char** argv)
     camera.fovy    = 45.0f;
     camera.projection = CAMERA_PERSPECTIVE;
     
-
     // -----------------------------------------------------------------
     // 5. Simulation constants
     const float cDeltaTime = 1.0f / 60.0f;
     const int   cCollisionSteps = 1;
 
     physics_system.OptimizeBroadPhase();
+
+    JPH::RVec3 sphere_start_pos = JPH::RVec3(0.0_r, 10.0_r, 0.0_r);
+    JPH::Quat  sphere_start_rot = JPH::Quat::sIdentity();
 
     // -----------------------------------------------------------------
     // 6. Main loop (raylib + physics)
@@ -264,6 +256,17 @@ int main(int argc, char** argv)
             (float)joltPos.GetY(),
             (float)joltPos.GetZ()
         };
+        // ---- Reset on R --------------------------------------------
+        if (IsKeyPressed(KEY_R))
+        {
+            // body_interface.RemoveBody(sphere_id);
+            // body_interface.DestroyBody(sphere_id);
+            // sphere_id = CreateSphere(body_interface);
+
+            body_interface.SetPositionAndRotation(sphere_id, sphere_start_pos, sphere_start_rot, JPH::EActivation::Activate);
+            body_interface.SetLinearVelocity (sphere_id, JPH::Vec3(0, -5, 0));
+            body_interface.SetAngularVelocity(sphere_id, JPH::Vec3::sZero());
+        }
 
         // ---- Rendering ------------------------------------------------
         BeginDrawing();
@@ -271,15 +274,15 @@ int main(int argc, char** argv)
 
         BeginMode3D(camera);
 
-        // Floor (large green box)
-        DrawCube({0, -1, 0}, 200, 2, 200, GREEN);
-        DrawCubeWires({0, -1, 0}, 200, 2, 200, DARKGREEN);
+            // Floor (large green box)
+            DrawCube({0, -1, 0}, 200, 2, 200, GREEN);
+            DrawCubeWires({0, -1, 0}, 200, 2, 200, DARKGREEN);
 
-        // Sphere (red)
-        DrawSphere(spherePos, 0.5f, RED);
+            // Sphere (red)
+            DrawSphere(spherePos, 0.5f, RED);
 
-        // Optional grid
-        DrawGrid(20, 5.0f);
+            // Optional grid
+            DrawGrid(20, 5.0f);
 
         EndMode3D();
 
