@@ -179,6 +179,41 @@ FetchContent_MakeAvailable(flecs)
 # )
 # FetchContent_MakeAvailable(stb)
 
+FetchContent_Declare(
+    JoltPhysics
+    GIT_REPOSITORY https://github.com/jrouwe/JoltPhysics.git
+    GIT_TAG        master
+    GIT_SHALLOW TRUE
+    USES_TERMINAL_DOWNLOAD TRUE
+)
+FetchContent_MakeAvailable(JoltPhysics)
+
+# This populates ${joltphysics_SOURCE_DIR} and ${joltphysics_BINARY_DIR}
+FetchContent_MakeAvailable(JoltPhysics)
+
+# --------------------------------------------------------------
+# 2. Tell Jolt to *build inside its own source directory*
+# --------------------------------------------------------------
+# Jolt's CMakeLists.txt lives in ${joltphysics_SOURCE_DIR}/Build
+# We invoke it manually so we can control where the library ends up.
+add_subdirectory(
+    ${joltphysics_SOURCE_DIR}/Build   # <-- path to Jolt's own CMakeLists.txt
+    ${joltphysics_BINARY_DIR}         # <-- where the objects go
+)
+
+# --------------------------------------------------------------
+# 3. (Optional) Create an imported interface target that is
+#     easy to link from anywhere in your project
+# --------------------------------------------------------------
+# add_library(Jolt::Jolt INTERFACE IMPORTED GLOBAL)
+# target_link_libraries(Jolt::Jolt INTERFACE Jolt)   # Jolt's own target name
+
+# # If you need include directories exposed:
+# target_include_directories(Jolt::Jolt
+#     INTERFACE
+#         ${joltphysics_SOURCE_DIR}/Jolt   # public headers
+# )
+
 
 FetchContent_Declare(
     imgui
@@ -227,7 +262,8 @@ if(${EXAMPLE_APP})
         # src/main_flecs03.cpp
         # src/main_flecs04.cpp
         # src/main_flecs.cpp
-        src/main_flecs_transform_3d_hierarchy.cpp
+        # src/main_flecs_transform_3d_hierarchy.cpp
+        src/raylib_jolt.cpp
     )
 
     # Link application with custom_cimgui
@@ -238,6 +274,8 @@ if(${EXAMPLE_APP})
         # lua                                             # lua
         flecs                                           # flecs
         # cglm                                            # cglm
+        # Jolt
+        Jolt::Jolt
     )
 
     # Include directories for the application
