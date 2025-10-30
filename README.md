@@ -2,12 +2,15 @@
 
 # License: MIT
 
+# Status:
+- testing.
+
 # library:
 - raylib 5.5
 - raygui 4.0
 - flecs 4.1.1
 - imgui 1.92.4
-- rlimgui
+- rlimgui 
 
 # Information:
   Sample c++ for raylib with imgui and flecs. Note there will be c code as well for simple libraries. Flecs has c and c++.
@@ -17,6 +20,7 @@
 - [x] simple imgui
 - [ ] jolt physics
     - [x] simple test
+    - [x] character controller test
 - [ ] custom phase
   - [x] render camera 3d
   - [x] imgui
@@ -49,8 +53,9 @@ world.set(main_context_t{
   Note this is sample and rework later. It to access singleton struct.
 
 
-
-
+# Notes:
+- raylib and jolt physics conflict with color from jolt name space.
+- 
 
 # Credits:
 - flecs community on discord.

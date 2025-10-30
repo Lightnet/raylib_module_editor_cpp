@@ -258,12 +258,15 @@ if(${EXAMPLE_APP})
         ${SRC_FILES}
         # src/main.cpp
         # src/main_imgui.cpp
-        # src/main_imgui_flecs.cpp
-        # src/main_flecs03.cpp
-        # src/main_flecs04.cpp
-        # src/main_flecs.cpp
         # src/main_flecs_transform_3d_hierarchy.cpp
-        src/raylib_jolt.cpp
+        # examples/main_imgui_flecs.cpp
+        # examples/main_flecs03.cpp
+        # examples/main_flecs04.cpp
+        # examples/main_flecs.cpp
+        # examples/raylib_jolt.cpp
+        # examples/raylib_jolt.cpp
+        # examples/raylib_jolt_camera.cpp
+        examples/raylib_jolt_character.cpp
     )
 
     # Link application with custom_cimgui
@@ -336,24 +339,7 @@ if(${EXPORT_FLECS_APP})
     set(APP_FLECS_NAME1 rlm)
     add_executable(${APP_FLECS_NAME1}
         ${SRC_FLECS_MODULES}
-        # src/main_camera_capsule.c
-        # src/main_raylib_shape_wires.c
-        # src/main_camera_picking.c
-        # src/main_camera_test01.c
-        # src/main_camera_test02.c
-        # src/main_editor_test.c
-        # src/main_enet_test.c
-        # src/main_ode_gui_test.c
-        # src/main_ode_test.c
-        # src/main_ode_controller_test.c
-        # src/main_raylib_libevent_test.c
         src/main_editor_test.c
-        # src/main_transform_3d_hierarchy_test.c
-        # src/main_transform_3d_hierarchy_test01.c
-        # src/main_transform_3d_hierarchy_test02.c
-        # src/main.c
-        # examples/module/main_transform_3d_hierarchy_test01.c
-        # examples/module/main_transform_3d_hierarchy_test02.c
     )
 
     target_compile_definitions(${APP_FLECS_NAME1} PRIVATE 
@@ -404,197 +390,6 @@ if(${EXPORT_FLECS_APP})
     endif()
 endif()
 
-set(EXPORT_BE_APP OFF)
-# set(EXPORT_FLECS_APP OFF)
-if(${EXPORT_BE_APP})
-    message(STATUS "EXPORT LIBEVENT APP")
-    set(APP_LEVENT_NAME rl_lev)
-    add_executable(${APP_LEVENT_NAME}
-        examples/c/raylib_event_base_dispatch.c
-    )
-    target_compile_definitions(${APP_LEVENT_NAME} PRIVATE 
-        # RAYGUI_IMPLEMENTATION=1
-    )
-    # Link application with custom_cimgui
-    target_link_libraries(${APP_LEVENT_NAME} PRIVATE 
-        raylib                                          # raylib
-        # Libevent::core
-        # libevent::core
-        event_shared 
-        event_core_shared 
-        # libevent
-        # lua                                           # lua
-        # flecs                                           # flecs
-        # cglm                                            # cglm
-        # ODE                                             # ode must be cap from ode repo cmake config
-    )
-    # Include directories for the application
-    target_include_directories(${APP_LEVENT_NAME} PUBLIC
-        ${PROJECT_SOURCE_DIR}/include                       # include
-        # ${lua_SOURCE_DIR}                                   # lua
-        ${raylib_SOURCE_DIR}/src                            # raylib include
-        # ${raylib_SOURCE_DIR}/src/external/glfw/include      # glfw
-        # ${enet_SOURCE_DIR}/include                          # enet
-        # ${stb_SOURCE_DIR}                                 # stb
-        ${raygui_SOURCE_DIR}/src                            # raygui
-        # ${cglm_SOURCE_DIR}/include                          # clgm
-        # ${ode_SOURCE_DIR}/include                         # 
-        # ${ode_BINARY_DIR}/include                           # 
-        ${libevent_SOURCE_DIR}/include                           # 
-        ${libevent_BINARY_DIR}/include                           # event2/event-config.h
-    )
-    # Windows-specific settings
-    if(WIN32)
-        # ws2_32 # network
-        target_link_libraries(${APP_LEVENT_NAME} PRIVATE 
-            ws2_32                                          # Winsock 2
-            gdi32                                           # Graphics Device Interface
-            user32                                          # Windows user interface
-            shell32                                         # Windows 
-            ws2_32                                          # network socket
-        )
-        # target_link_options(${APP_NAME} PRIVATE -static-libgcc)
-        target_link_options(${APP_LEVENT_NAME} PRIVATE
-            -static-libgcc                                  # GNU Compiler Collection
-            -static-libstdc++                               # Uncomment if C++ code is used
-            -static                                         # Avoid full static linking to prevent issues with system libraries
-        )
-    endif()
-endif()
-
-set(EXPORT_ENET_APP OFF)
-# set(EXPORT_FLECS_APP OFF)
-if(${EXPORT_ENET_APP})
-    message(STATUS "EXPORT ENET APP")
-    set(APP_ENET_CLIENT_NAME enet_client)
-    add_executable(${APP_ENET_CLIENT_NAME}
-        src/enet_client.c
-    )
-    # Link application with custom_cimgui
-    target_link_libraries(${APP_ENET_CLIENT_NAME} PRIVATE 
-        raylib                                          # raylib
-        flecs                                           # flecs
-        # cglm                                            # cglm
-        # ODE                                             # ode must be cap from ode repo cmake config
-    )
-    # Include directories for the application
-    target_include_directories(${APP_ENET_CLIENT_NAME} PUBLIC
-        ${PROJECT_SOURCE_DIR}/include                       # include
-        ${lua_SOURCE_DIR}                                   # lua
-        ${raylib_SOURCE_DIR}/src                            # raylib include
-        ${raylib_SOURCE_DIR}/src/external/glfw/include      # glfw
-        ${enet_SOURCE_DIR}/include                          # enet
-        # ${stb_SOURCE_DIR}                                 # stb
-        ${raygui_SOURCE_DIR}/src                            # raygui
-        ${cglm_SOURCE_DIR}/include                          # clgm
-        # ${ode_SOURCE_DIR}/include                         # 
-        # ${ode_BINARY_DIR}/include                           # 
-    )
-    # Windows-specific settings
-    if(WIN32)
-        target_link_libraries(${APP_ENET_CLIENT_NAME} PRIVATE 
-            ws2_32                                          # Winsock 2
-            gdi32                                           # Graphics Device Interface
-            user32                                          # Windows user interface
-            shell32                                         # Windows 
-            ws2_32                                          # network socket
-        )
-        target_link_options(${APP_ENET_CLIENT_NAME} PRIVATE
-            -static-libgcc                                  # GNU Compiler Collection
-            -static-libstdc++                               # Uncomment if C++ code is used
-            -static                                         # Avoid full static linking to prevent issues with system libraries
-        )
-    endif()
-    set(APP_ENET_SERVER_NAME enet_server)
-    add_executable(${APP_ENET_SERVER_NAME}
-        src/enet_server.c
-    )
-    # Link application with custom_cimgui
-    target_link_libraries(${APP_ENET_SERVER_NAME} PRIVATE 
-        raylib                                          # raylib
-        flecs                                           # flecs
-        # cglm                                            # cglm
-        # ODE                                             # ode must be cap from ode repo cmake config
-    )
-    # Include directories for the application
-    target_include_directories(${APP_ENET_SERVER_NAME} PUBLIC
-        ${PROJECT_SOURCE_DIR}/include                       # include
-        ${lua_SOURCE_DIR}                                   # lua
-        ${raylib_SOURCE_DIR}/src                            # raylib include
-        ${raylib_SOURCE_DIR}/src/external/glfw/include      # glfw
-        ${enet_SOURCE_DIR}/include                          # enet
-        # ${stb_SOURCE_DIR}                                 # stb
-        ${raygui_SOURCE_DIR}/src                            # raygui
-        ${cglm_SOURCE_DIR}/include                          # clgm
-        # ${ode_SOURCE_DIR}/include                         # 
-        # ${ode_BINARY_DIR}/include                           # 
-    )
-    # Windows-specific settings
-    if(WIN32)
-        target_link_libraries(${APP_ENET_SERVER_NAME} PRIVATE 
-            ws2_32                                          # Winsock 2
-            gdi32                                           # Graphics Device Interface
-            user32                                          # Windows user interface
-            shell32                                         # Windows 
-            ws2_32                                          # network socket
-        )
-        target_link_options(${APP_ENET_SERVER_NAME} PRIVATE
-            -static-libgcc                                  # GNU Compiler Collection
-            -static-libstdc++                               # Uncomment if C++ code is used
-            -static                                         # Avoid full static linking to prevent issues with system libraries
-        )
-    endif()
-endif()
-
-# set(EXPORT_ODE_APP ON)
-set(EXPORT_FLECS_APP OFF)
-if(${EXPORT_ODE_APP})
-    set(APP_ODE_NAME rl_flecs_ode)
-    add_executable(${APP_ODE_NAME}
-        # examples/c/raylib_flecs_ode_gui03.c
-        # examples/c/raylib_flecs_ode_controller.c
-        # examples/c/raylib_ode_static_box.c
-        # examples/c/raylib_ode_capsule_mesh.c
-        examples/c/raylib_ode_capsule_controller.c
-        # examples/c/raylib_physics_ode_simple.c
-        # examples/c/raylib_physics_ode_collision_sensor.c
-    )
-    # Link application with custom_cimgui
-    target_link_libraries(${APP_ODE_NAME} PRIVATE 
-        raylib                                          # raylib
-        flecs                                           # flecs
-        # cglm                                            # cglm
-        ODE                                             # ode must be cap from ode repo cmake config
-    )
-    # Include directories for the application
-    target_include_directories(${APP_ODE_NAME} PUBLIC
-        ${PROJECT_SOURCE_DIR}/include                       # include
-        ${lua_SOURCE_DIR}                                   # lua
-        ${raylib_SOURCE_DIR}/src                            # raylib include
-        ${raylib_SOURCE_DIR}/src/external/glfw/include      # glfw
-        ${enet_SOURCE_DIR}/include                          # enet
-        # ${stb_SOURCE_DIR}                                 # stb
-        ${raygui_SOURCE_DIR}/src                            # raygui
-        ${cglm_SOURCE_DIR}/include                          # clgm
-        # ${ode_SOURCE_DIR}/include                         # 
-        ${ode_BINARY_DIR}/include                           # 
-    )
-    # Windows-specific settings
-    if(WIN32)
-        target_link_libraries(${APP_ODE_NAME} PRIVATE 
-            ws2_32                                          # Winsock 2
-            gdi32                                           # Graphics Device Interface
-            user32                                          # Windows user interface
-            shell32                                         # Windows 
-            ws2_32                                          # network socket
-        )
-        target_link_options(${APP_ODE_NAME} PRIVATE
-            -static-libgcc                                  # GNU Compiler Collection
-            -static-libstdc++                               # Uncomment if C++ code is used
-            -static                                         # Avoid full static linking to prevent issues with system libraries
-        )
-    endif()
-endif()
 
 set(EXPORT_EXAMPLES_APP OFF) #ON OFF bool
 # set(EXPORT_EX_APP ON) #ON OFF bool
