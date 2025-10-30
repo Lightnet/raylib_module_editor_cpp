@@ -216,7 +216,6 @@ int main(int argc, char** argv)
     JPH::BodyID sphere_id = body_interface.CreateAndAddBody(sphere_settings, JPH::EActivation::Activate);
     body_interface.SetLinearVelocity(sphere_id, JPH::Vec3(0.0f, -5.0f, 0.0f));
 
-
     // ---------------------------------------------------------------
     //  Character controller settings
     // ---------------------------------------------------------------
@@ -229,7 +228,6 @@ int main(int argc, char** argv)
     char_settings.mShape = new JPH::CapsuleShape(character_height_standing * 0.5f, character_radius);
     char_settings.mSupportingVolume = JPH::Plane(JPH::Vec3::sAxisY(), -character_radius); // detect ground
     char_settings.mMass = 80.0f;
-    //char_settings.mGravity = physics_system.GetGravity();
 
     JPH::CharacterVirtual* character = new JPH::CharacterVirtual(
         &char_settings, 
@@ -238,10 +236,6 @@ int main(int argc, char** argv)
         0, // user data (optional)
         &physics_system
     );
-
-    // Add the character to the system (it needs a body ID for internal bookkeeping)
-    //character->AddToPhysicsSystem(JPH::EActivation::Activate);
-
 
     const int screenWidth = 1200;
     const int screenHeight = 800;
@@ -263,13 +257,15 @@ int main(int argc, char** argv)
     JPH::RVec3 sphere_start_pos = JPH::RVec3(0.0_r, 10.0_r, 0.0_r);
     JPH::Quat  sphere_start_rot = JPH::Quat::sIdentity();
 
+    JPH::RVec3 player_pos = JPH::RVec3(0.0_r, 5.0_r, 0.0_r);
+
     // ---------------------------------------------------------------
     //  Input helpers
     // ---------------------------------------------------------------
-    const float walk_speed = 5.0f;
-    const float run_speed  = 9.0f;
+    // const float walk_speed = 5.0f;
+    // const float run_speed  = 9.0f;
     const float jump_impulse = 8.0f;
-    bool is_running = false;
+    // bool is_running = false;
     JPH::Vec3 gravity(0, -9.8f, 0);
 
     TraceLog(LOG_INFO,    "init loop");
@@ -301,6 +297,7 @@ int main(int argc, char** argv)
 
         JPH::CharacterVirtual::ExtendedUpdateSettings update_settings;
 
+        // this need to update character movement
         character->ExtendedUpdate(
             deltaTime,
             character->GetUp() * physics_system.GetGravity().Length(),
@@ -311,11 +308,14 @@ int main(int argc, char** argv)
             {},
             temp_allocator
         );
+        // update physics objects
+        physics_system.Update(
+            cDeltaTime, 
+            cCollisionSteps,
+            &temp_allocator, 
+            &job_system
+        );
 
-        physics_system.Update(cDeltaTime, cCollisionSteps,
-                              &temp_allocator, &job_system);
-
-        
         JPH::RVec3 joltPos = body_interface.GetCenterOfMassPosition(sphere_id);
         Vector3 spherePos = {
             (float)joltPos.GetX(),
@@ -328,6 +328,14 @@ int main(int argc, char** argv)
             body_interface.SetPositionAndRotation(sphere_id, sphere_start_pos, sphere_start_rot, JPH::EActivation::Activate);
             body_interface.SetLinearVelocity (sphere_id, JPH::Vec3(0, -5, 0));
             body_interface.SetAngularVelocity(sphere_id, JPH::Vec3::sZero());
+        }
+        if (IsKeyPressed(KEY_T))
+        {
+            // Set the new position
+            character->SetPosition(player_pos);
+            // Optionally, reset the character's velocity to prevent
+            // momentum from carrying over after the teleport.
+            character->SetLinearVelocity(JPH::Vec3::sZero());
         }
 
         BeginDrawing();
@@ -345,7 +353,23 @@ int main(int argc, char** argv)
             // sync 
             JPH::RVec3 char_pos = character->GetCenterOfMassPosition();
             Vector3 pos = { (float)char_pos.GetX(), (float)char_pos.GetY(), (float)char_pos.GetZ() };
-            DrawSphereWires(pos, 1.0f, 8, 8, BLACK);
+            // DrawSphereWires(pos, 1.0f, 8, 8, BLACK);
+            // DrawCube(pos, 1.0f, 2.0f, 1.0f, RED);
+            // DrawCubeWires(pos, 1.01f, 2.01f, 1.01f, BLACK);
+
+            Vector3 capsule_start = {
+                (float)char_pos.GetX(),
+                (float)char_pos.GetY() - (character_height_standing * 0.5f),
+                (float)char_pos.GetZ()
+            };
+            Vector3 capsule_end = {
+                (float)char_pos.GetX(),
+                (float)char_pos.GetY() + (character_height_standing * 0.5f),
+                (float)char_pos.GetZ()
+            };
+
+            // DrawCapsule(capsule_start, capsule_end, 0.3f, 8, 8, BLACK);
+            DrawCapsuleWires(capsule_start, capsule_end, 0.3f, 8, 8, BLACK);
 
             // Optional grid
             DrawGrid(20, 5.0f);
@@ -363,6 +387,7 @@ int main(int argc, char** argv)
         EndDrawing();
     }
 
+    
     body_interface.RemoveBody(sphere_id);
     body_interface.DestroyBody(sphere_id);
 
