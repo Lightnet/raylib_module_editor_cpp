@@ -1,41 +1,14 @@
 // main.cpp
-#include "module_simple.h"
-#include <iostream>
+#define RAYLIB_IMPLEMENTATION   // <-- tells raylib to include its source once
+#include <raylib.h>             // <-- raylib header (C API, works fine in C++)
 
-int main(int, char *[])
+int main()
 {
     // -------------------------------------------------------
     // 1. Initialise the window
     // -------------------------------------------------------
     const int screenWidth  = 800;
     const int screenHeight = 450;
-
-    flecs::world ecs;
-
-    ecs.import<simple::module>();
-
-     // Create system that uses component from module
-    ecs.system<const simple::Position>("PrintPosition")
-        .each([](const simple::Position& p) {
-            std::cout << "p = {" << p.x << ", " << p.y << "} (system)\n";
-        });
-
-    // Create entity with imported components
-    flecs::entity e = ecs.entity()
-        .set<simple::Position>({10, 20})
-        .set<simple::Velocity>({1, 1});
-
-    // Call progress which runs imported Move system
-    ecs.progress();
-
-    // Use component from module in operation
-    e.get([](const simple::Position& p) {
-        std::cout << "p = {" << p.x << ", " << p.y << "} (get)\n";
-    });
-
-
-
-
 
     InitWindow(screenWidth, screenHeight, "raylib [C++] – Hello World");
     SetTargetFPS(60);               // 60 FPS
@@ -44,7 +17,17 @@ int main(int, char *[])
     // 1. Change the global log level (default = LOG_INFO)
     // -----------------------------------------------------------------
     SetTraceLogLevel(LOG_ALL);          // show everything
+    // SetTraceLogLevel(LOG_WARNING);   // only warnings + errors + fatal
+    // SetTraceLogLevel(LOG_ERROR);     // errors only
+    // SetTraceLogLevel(LOG_NONE);      // silence everything
 
+    // -----------------------------------------------------------------
+    // 2. Print messages
+    // -----------------------------------------------------------------
+    // TraceLog(LOG_INFO,    "Program started – FPS target: %d", GetTargetFPS());
+    // TraceLog(LOG_WARNING, "This is a warning – you might want to check something");
+    // TraceLog(LOG_ERROR,   "Something went wrong! Error code: %d", 42);
+    // TraceLog(LOG_DEBUG,   "Debug value: x = %.2f, y = %.2f", 1.23f, 4.56f);
     TraceLog(LOG_INFO, "RAYLIB INIT LOOP...\n");
     
     // -------------------------------------------------------

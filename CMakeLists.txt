@@ -253,11 +253,12 @@ if(${EXAMPLE_APP})
     set(APP_NAME ril)
     set(SRC_FILES
         ${rlimgui_SOURCE_DIR}/rlImGui.cpp
+        src/module_simple.cpp
     )
     add_executable(${APP_NAME}
         # icon.rc
         ${SRC_FILES}
-        # src/main.cpp
+        src/main.cpp
         # src/main_imgui.cpp
         # src/main_flecs_transform_3d_hierarchy.cpp
         # examples/main_imgui_flecs.cpp
@@ -269,7 +270,8 @@ if(${EXAMPLE_APP})
         # examples/raylib_jolt_camera.cpp
         # examples/raylib_jolt_character.cpp
         # examples/main_flecs_event.cpp
-        examples/main_flecs_event_params.cpp
+        # examples/main_flecs_event_params.cpp
+        # examples/main_flecs_on_start.cpp
     )
 
     # Link application with custom_cimgui
